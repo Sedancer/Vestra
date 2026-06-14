@@ -8,7 +8,9 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.view.Gravity
 import android.view.WindowManager
 import android.widget.ImageView
@@ -19,6 +21,8 @@ class OverlayService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: ImageView? = null
     private lateinit var prefs: PrefsManager
+    private val handler = Handler(Looper.getMainLooper())
+    private var showRunnable: Runnable? = null
 
     companion object {
         const val CHANNEL_ID = "OverlayServiceChannel"
@@ -44,12 +48,20 @@ class OverlayService : Service() {
         startForeground(NOTIFICATION_ID, notification)
 
         when (intent?.action) {
-            ACTION_START -> showOverlay()
+            ACTION_START -> scheduleShowOverlay()
             ACTION_STOP -> stopSelf()
-            else -> showOverlay() // Default
+            else -> scheduleShowOverlay() // Default
         }
 
         return START_STICKY
+    }
+
+    private fun scheduleShowOverlay() {
+        showRunnable?.let { handler.removeCallbacks(it) }
+        val delayMs = prefs.timerDelay * 1000L
+        val runnable = Runnable { showOverlay() }
+        showRunnable = runnable
+        handler.postDelayed(runnable, delayMs)
     }
 
     private fun showOverlay() {
@@ -67,6 +79,26 @@ class OverlayService : Service() {
         overlayView = ImageView(this).apply {
             setImageBitmap(bitmap)
             scaleType = ImageView.ScaleType.FIT_XY
+            
+            var clickCount = 0
+            var lastClickTime = 0L
+
+            setOnClickListener {
+                val currentTime = System.currentTimeMillis()
+                val interval = prefs.hideClickInterval
+                
+                if (currentTime - lastClickTime <= interval) {
+                    clickCount++
+                } else {
+                    clickCount = 1
+                }
+                lastClickTime = currentTime
+
+                if (clickCount >= prefs.hideClickCount) {
+                    stopSelf()
+                    clickCount = 0
+                }
+            }
         }
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -94,8 +126,13 @@ class OverlayService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        handler.removeCallbacksAndMessages(null)
         if (overlayView != null) {
-            windowManager?.removeView(overlayView)
+            try {
+                windowManager?.removeView(overlayView)
+            } catch (e: Exception) {
+                // View might not be attached
+            }
             overlayView = null
         }
     }

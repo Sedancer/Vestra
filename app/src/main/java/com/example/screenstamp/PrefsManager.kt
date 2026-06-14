@@ -25,4 +25,16 @@ class PrefsManager(context: Context) {
     var imagePath: String?
         get() = prefs.getString("imagePath", null)
         set(value) = prefs.edit().putString("imagePath", value).apply()
+
+    var timerDelay: Int
+        get() = prefs.getInt("timerDelay", 5)
+        set(value) = prefs.edit().putInt("timerDelay", value).apply()
+
+    var hideClickCount: Int
+        get() = prefs.getInt("hideClickCount", 4)
+        set(value) = prefs.edit().putInt("hideClickCount", value).apply()
+
+    var hideClickInterval: Int
+        get() = prefs.getInt("hideClickInterval", 400)
+        set(value) = prefs.edit().putInt("hideClickInterval", value).apply()
 }

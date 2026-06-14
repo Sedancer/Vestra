@@ -58,8 +58,14 @@ class MainActivity : ComponentActivity() {
                     ControlPanel(
                         prefs = prefs,
                         onSelectImage = { selectImageLauncher.launch("image/*") },
-                        onShow = { sendCommand(OverlayService.ACTION_START) },
-                        onHide = { sendCommand(OverlayService.ACTION_STOP) }
+                        onShow = { 
+                            sendCommand(OverlayService.ACTION_START)
+                            finishAndRemoveTask()
+                        },
+                        onHide = { 
+                            sendCommand(OverlayService.ACTION_STOP)
+                            finishAndRemoveTask()
+                        }
                     )
                 }
             }
@@ -90,7 +96,9 @@ fun ControlPanel(
     var height by remember { mutableStateOf(prefs.height.toString()) }
     var x by remember { mutableStateOf(prefs.x.toString()) }
     var y by remember { mutableStateOf(prefs.y.toString()) }
-    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    var timerDelay by remember { mutableStateOf(prefs.timerDelay.toString()) }
+    var hideClickCount by remember { mutableStateOf(prefs.hideClickCount.toString()) }
+    var hideClickInterval by remember { mutableStateOf(prefs.hideClickInterval.toString()) }
 
     Column(
         modifier = Modifier
@@ -106,41 +114,13 @@ fun ControlPanel(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = width,
-            onValueChange = { width = it; it.toIntOrNull()?.let { v -> prefs.width = v } },
-            label = { Text("Width (px)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { focusManager.clearFocus() }),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = height,
-            onValueChange = { height = it; it.toIntOrNull()?.let { v -> prefs.height = v } },
-            label = { Text("Height (px)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { focusManager.clearFocus() }),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = x,
-            onValueChange = { x = it; it.toIntOrNull()?.let { v -> prefs.x = v } },
-            label = { Text("X Coordinate (px)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { focusManager.clearFocus() }),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = y,
-            onValueChange = { y = it; it.toIntOrNull()?.let { v -> prefs.y = v } },
-            label = { Text("Y Coordinate (px)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { focusManager.clearFocus() }),
-            modifier = Modifier.fillMaxWidth()
-        )
+        NumberInputField(label = "Width (px)", value = width) { width = it; it.toIntOrNull()?.let { v -> prefs.width = v } }
+        NumberInputField(label = "Height (px)", value = height) { height = it; it.toIntOrNull()?.let { v -> prefs.height = v } }
+        NumberInputField(label = "X Coordinate (px)", value = x) { x = it; it.toIntOrNull()?.let { v -> prefs.x = v } }
+        NumberInputField(label = "Y Coordinate (px)", value = y) { y = it; it.toIntOrNull()?.let { v -> prefs.y = v } }
+        NumberInputField(label = "Timer Delay (s)", value = timerDelay) { timerDelay = it; it.toIntOrNull()?.let { v -> prefs.timerDelay = v } }
+        NumberInputField(label = "Hide Click Count", value = hideClickCount) { hideClickCount = it; it.toIntOrNull()?.let { v -> prefs.hideClickCount = v } }
+        NumberInputField(label = "Hide Click Interval (ms)", value = hideClickInterval) { hideClickInterval = it; it.toIntOrNull()?.let { v -> prefs.hideClickInterval = v } }
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -158,3 +138,20 @@ fun ControlPanel(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NumberInputField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { focusManager.clearFocus() }),
+        modifier = Modifier.fillMaxWidth()
+    )
+}
